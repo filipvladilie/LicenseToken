@@ -1,0 +1,14 @@
+[features]
+seeds = false
+[programs.devnet]
+anchor_escrow = "4zz21Ez51HVBaPaMcemdA2SGgd6KNrFKUtCCCeXdYKRE"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "devnet"
+wallet = "/Users/filipvladiliuta/Desktop/Rust/license/CNTh6ZqZUMo1m51axTtuAoUdxGYZwvd6xTe1nZAjVbhy.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
