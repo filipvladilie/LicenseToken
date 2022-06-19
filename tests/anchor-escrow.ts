@@ -32,7 +32,7 @@ describe('anchor-escrow', () => {
   const initializerMainAccount = anchor.web3.Keypair.generate();
   const takerMainAccount = anchor.web3.Keypair.generate();
   let escrowAccount = null;
-
+  let newEscrowAccount = null;
   it("Initialize program state", async () => {
     // Airdropping tokens to a payer.
     
@@ -165,13 +165,69 @@ describe('anchor-escrow', () => {
         vaultAccount: vault_account_pda,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
-      signers: [takerMainAccount]
+      signers:[takerMainAccount]
     });
+
+    // let _takerTokenAccountA = await provider.connection.getAccountInfo(
+    //   takerTokenAccountA
+    // );
 
   });
 
   it("Initialize escrow and cancel escrow", async () => {
     // TODO
+
+    newEscrowAccount = await serumCmn.createAccountRentExempt(
+      provider,
+      program.programId,
+      program.account.escrowAccount.size
+    );
+
+    await mintTo(
+      provider.connection,
+      payer,
+      mintA,
+      initializerTokenAccountA,
+      mintAuthority.publicKey,
+      initializerAmount,
+      [mintAuthority],
+    );
+
+    await program.rpc.initialize(
+      new anchor.BN(initializerAmount),
+      new anchor.BN(takerAmount),
+      {
+        accounts: {
+          initializer: initializerMainAccount.publicKey,
+          initializerDepositTokenAccount: initializerTokenAccountA,
+          initializerReceiveTokenAccount: initializerTokenAccountB,
+          escrowAccount: newEscrowAccount.publicKey,
+          systemProgram: SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+        signers: [initializerMainAccount],
+      }
+    );
+
+    await program.rpc.cancel({
+      accounts: {
+        initializer: initializerMainAccount.publicKey,
+        initializerDepositTokenAccount: initializerTokenAccountA,
+        vaultAccount: vault_account_pda,
+        escrowAccount: newEscrowAccount.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+    });
+
+    // let _initializerTokenAccountA = await provider.connection.getAccountInfo(
+    //   initializerTokenAccountA
+    // );
+    // assert.isTrue(
+    //   _initializerTokenAccountA.owner.equals(initializerTokenAccountA)
+    // );
+
+    // Check that the new owner is the PDA.
+    // assert.ok(_initializerTokenAccountA.owner.equals(vault_account_pda));
 
   });
 });
