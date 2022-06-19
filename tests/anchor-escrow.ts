@@ -56,27 +56,6 @@ describe('anchor-escrow', () => {
 
     // console.log("CONFIRM", provider.wallet.publicKey);
 
-    // Fund Main Accounts
-    // await provider.send(
-    //   (() => {
-    //     const tx = new Transaction();
-    //     tx.add(
-    //       SystemProgram.transfer({
-    //         fromPubkey: payer.publicKey,
-    //         toPubkey: initializerMainAccount.publicKey,
-    //         lamports: 100000000,
-    //       }),
-    //       SystemProgram.transfer({
-    //         fromPubkey: payer.publicKey,
-    //         toPubkey: takerMainAccount.publicKey,
-    //         lamports: 100000000,
-    //       })
-    //     );
-    //     return tx;
-    //   })(),
-    //   [payer]
-    // );
-
     mintA = await createMint(
       provider.connection,
       payer,
@@ -119,43 +98,22 @@ describe('anchor-escrow', () => {
       initializerAmount,
       [mintAuthority],
     );
-
-    let _initializerTokenAccountA = await provider.connection.getAccountInfo(initializerTokenAccountA);
-    let _takerTokenAccountB = await provider.connection.getAccountInfo(takerTokenAccountB);
-
-    // console.log("CCCCC", _initializerTokenAccountA.data.toString("utf8"));
-    // var data = Buffer.isBuffer(_initializerTokenAccountA.data);
-    // console.log("CCCCC", _initializerTokenAccountA.data.toJSON())
-    // assert.ok(_initializerTokenAccountA.amount.toNumber() == initializerAmount);
-    // assert.ok(_takerTokenAccountB.amount.toNumber() == takerAmount);
   });
 
   it("Initialize escrow", async () => {
     const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
-      [Buffer.from(anchor.utils.bytes.utf8.encode("token-seed"))],
+      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
       program.programId
     );
     vault_account_pda = _vault_account_pda;
     vault_account_bump = _vault_account_bump;
 
-    // console.log("PAD", vault_account_pda);
-    // console.log("BUMP", vault_account_bump);
-
     await provider.connection.requestAirdrop(
       initializerMainAccount.publicKey,
       2*1000000000
     );
-
-    const [_vault_authority_pda, _vault_authority_bump] = await PublicKey.findProgramAddress(
-      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
-      program.programId
-    );
-    vault_authority_pda = vault_authority_pda;
-    
-    const tempVar = await program.account.escrowAccount.createInstruction(escrowAccount);
-    
+ 
     await program.rpc.initialize(
-      vault_account_bump,
       new anchor.BN(initializerAmount),
       new anchor.BN(takerAmount),
       {
@@ -180,7 +138,7 @@ describe('anchor-escrow', () => {
     // Check that the new owner is the PDA.
     // assert.ok(_vault.owner.equals(vault_authority_pda));
 
-    // // Check that the values in the escrow account match what we expect.
+    // Check that the values in the escrow account match what we expect.
     assert.ok(_escrowAccount.initializerKey.equals(initializerMainAccount.publicKey));
     assert.ok(_escrowAccount.initializerAmount.toNumber() == initializerAmount);
     assert.ok(_escrowAccount.takerAmount.toNumber() == takerAmount);
@@ -194,10 +152,27 @@ describe('anchor-escrow', () => {
 
   it("Exchange escrow state", async () => {
     // TODO
+
+    await program.rpc.exchange({
+      accounts: {
+        taker:takerMainAccount.publicKey,
+        takerDepositTokenAccount: takerTokenAccountB,
+        takerReceiveTokenAccount: takerTokenAccountA,
+        initializerDepositTokenAccount: initializerTokenAccountA,
+        initializerReceiveTokenAccount: initializerTokenAccountB,
+        initializer: initializerMainAccount.publicKey,
+        escrowAccount: escrowAccount.publicKey,
+        vaultAccount: vault_account_pda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+      signers: [takerMainAccount]
+    });
+
   });
 
   it("Initialize escrow and cancel escrow", async () => {
     // TODO
+
   });
 });
 
