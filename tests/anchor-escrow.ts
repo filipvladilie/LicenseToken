@@ -57,25 +57,25 @@ describe('anchor-escrow', () => {
     // console.log("CONFIRM", provider.wallet.publicKey);
 
     // Fund Main Accounts
-    await provider.send(
-      (() => {
-        const tx = new Transaction();
-        tx.add(
-          SystemProgram.transfer({
-            fromPubkey: payer.publicKey,
-            toPubkey: initializerMainAccount.publicKey,
-            lamports: 100000000,
-          }),
-          SystemProgram.transfer({
-            fromPubkey: payer.publicKey,
-            toPubkey: takerMainAccount.publicKey,
-            lamports: 100000000,
-          })
-        );
-        return tx;
-      })(),
-      [payer]
-    );
+    // await provider.send(
+    //   (() => {
+    //     const tx = new Transaction();
+    //     tx.add(
+    //       SystemProgram.transfer({
+    //         fromPubkey: payer.publicKey,
+    //         toPubkey: initializerMainAccount.publicKey,
+    //         lamports: 100000000,
+    //       }),
+    //       SystemProgram.transfer({
+    //         fromPubkey: payer.publicKey,
+    //         toPubkey: takerMainAccount.publicKey,
+    //         lamports: 100000000,
+    //       })
+    //     );
+    //     return tx;
+    //   })(),
+    //   [payer]
+    // );
 
     mintA = await createMint(
       provider.connection,
@@ -153,20 +153,6 @@ describe('anchor-escrow', () => {
     vault_authority_pda = vault_authority_pda;
     
     const tempVar = await program.account.escrowAccount.createInstruction(escrowAccount);
-
-    // console.log("1", vault_account_bump);
-    // console.log("2", initializerAmount);
-    // console.log("3", takerAmount);
-    // console.log("4", initializerMainAccount.publicKey);
-    // console.log("5", mintA);
-    // console.log("6", initializerTokenAccountA);
-    // console.log("7", initializerTokenAccountB);
-    // console.log("8", escrowAccount.publicKey);
-    // console.log("9", anchor.web3.SystemProgram.programId);
-    // console.log("10", anchor.web3.SYSVAR_RENT_PUBKEY);
-    // console.log("11", TOKEN_PROGRAM_ID);
-    // console.log("12", tempVar);
-    // console.log("13", escrowAccount);
     
     await program.rpc.initialize(
       vault_account_bump,
@@ -175,38 +161,35 @@ describe('anchor-escrow', () => {
       {
         accounts: {
           initializer: initializerMainAccount.publicKey,
-          vaultAccount: vault_account_pda,
-          mint: mintA,
           initializerDepositTokenAccount: initializerTokenAccountA,
           initializerReceiveTokenAccount: initializerTokenAccountB,
           escrowAccount: escrowAccount.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
         signers:[ initializerMainAccount],
       }
     );
 
-    // let _vault = await provider.connection.getAccountInfo(vault_account_pda);
+    let _vault = await provider.connection.getAccountInfo(vault_account_pda);
 
-    // let _escrowAccount = await program.account.escrowAccount.fetch(
-    //   escrowAccount.publicKey
-    // );
+    let _escrowAccount = await program.account.escrowAccount.fetch(
+      escrowAccount.publicKey
+    );
 
-    // // Check that the new owner is the PDA.
+    // Check that the new owner is the PDA.
     // assert.ok(_vault.owner.equals(vault_authority_pda));
 
     // // Check that the values in the escrow account match what we expect.
-    // assert.ok(_escrowAccount.initializerKey.equals(initializerMainAccount.publicKey));
-    // assert.ok(_escrowAccount.initializerAmount.toNumber() == initializerAmount);
-    // assert.ok(_escrowAccount.takerAmount.toNumber() == takerAmount);
-    // assert.ok(
-    //   _escrowAccount.initializerDepositTokenAccount.equals(initializerTokenAccountA)
-    // );
-    // assert.ok(
-    //   _escrowAccount.initializerReceiveTokenAccount.equals(initializerTokenAccountB)
-    // );
+    assert.ok(_escrowAccount.initializerKey.equals(initializerMainAccount.publicKey));
+    assert.ok(_escrowAccount.initializerAmount.toNumber() == initializerAmount);
+    assert.ok(_escrowAccount.takerAmount.toNumber() == takerAmount);
+    assert.ok(
+      _escrowAccount.initializerDepositTokenAccount.equals(initializerTokenAccountA)
+    );
+    assert.ok(
+      _escrowAccount.initializerReceiveTokenAccount.equals(initializerTokenAccountB)
+    );
   });
 
   it("Exchange escrow state", async () => {

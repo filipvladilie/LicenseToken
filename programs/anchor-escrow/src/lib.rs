@@ -37,14 +37,9 @@ pub mod anchor_escrow {
         let (vault_authority, _vault_authority_bump) =
             Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
         token::set_authority(
-            ctx.accounts.into_set_authority_context(),
+            ctx.accounts.into(),
             AuthorityType::AccountOwner,
             Some(vault_authority),
-        )?;
-
-        token::transfer(
-            ctx.accounts.into_transfer_to_pda_context(),
-            ctx.accounts.escrow_account.initializer_amount,
         )?;
 
         Ok(())
@@ -104,16 +99,6 @@ pub struct Initialize<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(mut, signer)]
     pub initializer: AccountInfo<'info>,
-    pub mint: Account<'info, Mint>,
-    #[account(
-        init,
-        seeds = [b"token-seed".as_ref()],
-        bump,
-        payer = initializer,
-        token::mint = mint,
-        token::authority = initializer,
-    )]
-    pub vault_account: Account<'info, TokenAccount>,
     #[account(
         mut,
         constraint = initializer_deposit_token_account.amount >= initializer_amount
@@ -124,7 +109,6 @@ pub struct Initialize<'info> {
     pub escrow_account: Box<Account<'info, EscrowAccount>>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub system_program: AccountInfo<'info>,
-    pub rent: Sysvar<'info, Rent>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub token_program: AccountInfo<'info>,
 }
@@ -193,25 +177,17 @@ pub struct EscrowAccount {
     pub taker_amount: u64,
 }
 
-impl<'info> Initialize<'info> {
-    fn into_transfer_to_pda_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: self
+impl<'info> From<&mut Initialize<'info>> for CpiContext<'_, '_, '_, 'info, SetAuthority<'info>> {
+    fn from(accounts: &mut Initialize<'info>) -> Self {
+        let cpi_accounts = SetAuthority {
+            account_or_mint: accounts
                 .initializer_deposit_token_account
                 .to_account_info()
                 .clone(),
-            to: self.vault_account.to_account_info().clone(),
-            authority: self.initializer.clone(),
+            current_authority: accounts.initializer.to_account_info().clone(),
         };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
-    }
-
-    fn into_set_authority_context(&self) -> CpiContext<'_, '_, '_, 'info, SetAuthority<'info>> {
-        let cpi_accounts = SetAuthority {
-            account_or_mint: self.vault_account.to_account_info().clone(),
-            current_authority: self.initializer.clone(),
-        };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+        let cpi_program = accounts.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
     }
 }
 
@@ -238,6 +214,10 @@ impl<'info> Cancel<'info> {
         };
         CpiContext::new(self.token_program.clone(), cpi_accounts)
     }
+}
+
+impl EscrowAccount {
+    pub const LEN: usize = 32 + 32 + 32 + 8 + 8;
 }
 
 impl<'info> Exchange<'info> {
